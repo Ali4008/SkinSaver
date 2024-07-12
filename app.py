@@ -8,7 +8,7 @@ from PyQt5.QtGui import QFont, QPalette, QColor, QImage, QPixmap
 from PyQt5.QtCore import Qt, QTimer
 
 # Set your OpenAI API key
-openai.api_key = "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"
+openai.api_key = OPENAI-API
 
 class ChatBotApp(QMainWindow):
     def __init__(self):
