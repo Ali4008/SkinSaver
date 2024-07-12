@@ -1,0 +1,6 @@
+train: /train
+val: /valid 
+test: /test
+
+nc: 6
+names: ['Acne', 'Blackhead', 'Dark Circles', 'Dry Skin', 'Englarged Pores', 'Wrinkles']
