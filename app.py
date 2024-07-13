@@ -3,12 +3,12 @@ import openai
 import cv2
 import torch
 import random
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QLineEdit, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLabel, QTabWidget
-from PyQt5.QtGui import QFont, QPalette, QColor, QImage, QPixmap
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QLineEdit, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLabel, QTabWidget, QFileDialog
+from PyQt5.QtGui import QFont, QImage, QPixmap
 from PyQt5.QtCore import Qt, QTimer
 
 # Set your OpenAI API key
-openai.api_key = OPENAI-API
+openai.api_key = OPEN-AI Key
 
 class ChatBotApp(QMainWindow):
     def __init__(self):
@@ -17,7 +17,6 @@ class ChatBotApp(QMainWindow):
         # Set up the main window
         self.setWindowTitle("SkinSaver")
         self.setGeometry(100, 100, 800, 600)
-
 
         # Set up the central widget
         central_widget = QTabWidget()
@@ -92,7 +91,7 @@ class ChatBotApp(QMainWindow):
         self.input_field.returnPressed.connect(self.send_message)
 
         # Initialize the messages list
-        self.messages = [{"role": "system", "content": "You are a knowledgeable dermatologist assistant. Provide helpful and accurate recommendations for skin problems detected."}]
+        self.messages = [{"role": "system", "content": "You are a knowledgeable dermatologist assistant."}]
 
         # Camera tab
         self.camera_tab = QWidget()
@@ -110,9 +109,36 @@ class ChatBotApp(QMainWindow):
         info_label.setStyleSheet("color: #333333; margin-top: 10px;")
         camera_layout.addWidget(info_label)
 
+        # Image upload tab
+        self.image_tab = QWidget()
+        image_layout = QVBoxLayout(self.image_tab)
+
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setStyleSheet("border: 1px solid #CCCCCC; border-radius: 5px;")
+        image_layout.addWidget(self.image_label)
+
+        upload_button = QPushButton("Upload Image")
+        upload_button.setFont(QFont("Arial", 12, QFont.Bold))
+        upload_button.setStyleSheet("""
+            QPushButton {
+                background-color: #008CBA;
+                color: white;
+                padding: 10px;
+                border: none;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #007BB5;
+            }
+        """)
+        upload_button.clicked.connect(self.upload_image)
+        image_layout.addWidget(upload_button)
+
         # Add tabs to the central widget
         central_widget.addTab(self.chatbot_tab, "Chatbot")
         central_widget.addTab(self.camera_tab, "Camera")
+        central_widget.addTab(self.image_tab, "Upload Image")
 
         # Initialize camera
         self.cap = cv2.VideoCapture(0)
@@ -125,7 +151,7 @@ class ChatBotApp(QMainWindow):
         pathlib.PosixPath = pathlib.WindowsPath
 
         # Load the YOLO model
-        model_path = r'C:\Users\Hp\Desktop\RT Tech\Yolo_Skin_Conditions\kaggle\working\best_model.pt'
+        model_path = r'C:\Users\Hp\Desktop\RT Tech\Yolo_Skin_Conditions\Skin_Conditions\kaggle\working\best_model.pt'
         self.model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
 
     def send_message(self):
@@ -173,6 +199,28 @@ class ChatBotApp(QMainWindow):
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
             self.video_label.setPixmap(QPixmap.fromImage(qt_image))
+
+    def upload_image(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select Image File", "", "Image Files (*.png *.jpg *.jpeg *.bmp);;All Files (*)", options=options)
+        if file_name:
+            self.process_uploaded_image(file_name)
+
+    def process_uploaded_image(self, file_path):
+        image = cv2.imread(file_path)
+        results = self.model(image)
+
+        # Draw the results on the image
+        for *xyxy, conf, cls in results.xyxy[0].tolist():
+            label = f'{results.names[int(cls)]} {conf:.2f}'
+            plot_one_box(xyxy, image, label=label, color=(0, 255, 0), line_thickness=2)
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        h, w, ch = image.shape
+        bytes_per_line = ch * w
+        qt_image = QImage(image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+        self.image_label.setPixmap(QPixmap.fromImage(qt_image))
 
     def closeEvent(self, event):
         self.cap.release()
